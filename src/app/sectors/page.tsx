@@ -113,7 +113,11 @@ export default async function SectorsPage() {
         <Card key={s.sector}>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>{s.sector}</CardTitle>
+              <CardTitle>
+                <Link href={`/comparables/${encodeURIComponent(s.sector)}`} className="hover:underline">
+                  {s.sector}
+                </Link>
+              </CardTitle>
               <Badge variant={s.avgUpside >= 0 ? 'default' : 'destructive'}>
                 Avg: {s.avgUpside >= 0 ? '+' : ''}{s.avgUpside.toFixed(1)}%
               </Badge>

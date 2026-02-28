@@ -113,7 +113,36 @@ export interface MultiplesDetails {
     pb: number | null;
     ps: number | null;
   };
+  dynamicSectorMedians?: {
+    pe: number | null;
+    evEbitda: number | null;
+    pb: number | null;
+    ps: number | null;
+    sampleSize: number;
+  };
+  historicalAvgEvEbitda: number | null;
+  historicalEvEbitdaValues: number[];
   averageValuation: number;
+}
+
+export interface ComparableCompany {
+  ticker: string;
+  name: string;
+  marketCap: number;
+  price: number;
+  fairValue: number;
+  upsidePercent: number;
+  rating: string;
+  pe: number | null;
+  evEbitda: number | null;
+  pb: number | null;
+  ps: number | null;
+  roe: number | null;
+  grossMargin: number | null;
+  operatingMargin: number | null;
+  netMargin: number | null;
+  debtToEquity: number | null;
+  revenueGrowth: number | null;
 }
 
 export interface PortfolioPosition {

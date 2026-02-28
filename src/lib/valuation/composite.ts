@@ -1,6 +1,7 @@
 import { FinancialData, ValuationResult } from '@/types';
 import { calculateDCF } from './dcf';
 import { calculateMultiplesValuation } from './multiples';
+import { DynamicSectorMedians } from './sector-averages';
 
 const DCF_WEIGHT = 0.5;
 const MULTIPLES_WEIGHT = 0.5;
@@ -12,6 +13,7 @@ export function calculateCompositeValuation(
   sector: string,
   marketCap: number,
   beta?: number,
+  dynamicSectorMedians?: DynamicSectorMedians | null,
 ): ValuationResult {
   // Estimate shares outstanding
   const sharesOutstanding = currentPrice > 0 ? marketCap / currentPrice : 0;
@@ -21,7 +23,7 @@ export function calculateCompositeValuation(
   const dcfValue = dcfResult?.fairValuePerShare || null;
 
   // Multiples valuation
-  const multiplesResult = calculateMultiplesValuation(financials, currentPrice, sector, marketCap);
+  const multiplesResult = calculateMultiplesValuation(financials, currentPrice, sector, marketCap, dynamicSectorMedians);
   const multiplesValue = multiplesResult?.averageValuation || null;
 
   // Composite value

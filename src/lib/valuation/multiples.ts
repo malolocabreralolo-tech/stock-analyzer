@@ -1,4 +1,5 @@
 import { FinancialData, MultiplesDetails } from '@/types';
+import { DynamicSectorMedians } from './sector-averages';
 
 // Sector median multiples (approximate)
 const SECTOR_MEDIANS: Record<string, { pe: number; evEbitda: number; pb: number; ps: number }> = {
@@ -22,11 +23,20 @@ export function calculateMultiplesValuation(
   currentPrice: number,
   sector: string,
   marketCap?: number,
+  dynamicSectorMedians?: DynamicSectorMedians | null,
 ): MultiplesDetails | null {
   if (financials.length === 0 || currentPrice <= 0) return null;
 
   const latest = financials[0];
-  const medians = SECTOR_MEDIANS[sector] || DEFAULT_MEDIANS;
+  const hardcoded = SECTOR_MEDIANS[sector] || DEFAULT_MEDIANS;
+
+  // Prefer dynamic medians over hardcoded when available
+  const medians = {
+    pe: dynamicSectorMedians?.pe ?? hardcoded.pe,
+    evEbitda: dynamicSectorMedians?.evEbitda ?? hardcoded.evEbitda,
+    pb: dynamicSectorMedians?.pb ?? hardcoded.pb,
+    ps: dynamicSectorMedians?.ps ?? hardcoded.ps,
+  };
 
   // Estimate shares outstanding
   const sharesOutstanding = marketCap && currentPrice > 0 ? marketCap / currentPrice : 0;
@@ -84,6 +94,24 @@ export function calculateMultiplesValuation(
     valuations.push(latest.eps * avgPE);
   }
 
+  // Historical average EV/EBITDA
+  const historicalEvEbitdaValues = financials
+    .filter((f) => f.evEbitda != null && f.evEbitda > 0 && f.evEbitda < 100)
+    .map((f) => f.evEbitda!);
+
+  const historicalAvgEvEbitda = historicalEvEbitdaValues.length >= 2
+    ? historicalEvEbitdaValues.reduce((a, b) => a + b, 0) / historicalEvEbitdaValues.length
+    : null;
+
+  if (historicalAvgEvEbitda && latest.ebitda && latest.ebitda > 0 && sharesOutstanding > 0) {
+    const ebitdaPerShare = latest.ebitda / sharesOutstanding;
+    const debtPerShare = (latest.totalDebt || 0) / sharesOutstanding;
+    const histEvEbitdaVal = ebitdaPerShare * historicalAvgEvEbitda - debtPerShare;
+    if (isFinite(histEvEbitdaVal) && histEvEbitdaVal > 0) {
+      valuations.push(histEvEbitdaVal);
+    }
+  }
+
   const averageValuation = valuations.reduce((a, b) => a + b, 0) / valuations.length;
 
   return {
@@ -97,6 +125,11 @@ export function calculateMultiplesValuation(
       pb: medians.pb,
       ps: medians.ps,
     },
+    dynamicSectorMedians: dynamicSectorMedians
+      ? { ...dynamicSectorMedians }
+      : undefined,
+    historicalAvgEvEbitda,
+    historicalEvEbitdaValues,
     averageValuation,
   };
 }
