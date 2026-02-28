@@ -21,7 +21,7 @@ function isCacheStale(date: Date): boolean {
 export async function getCompanyData(ticker: string): Promise<CompanyProfile | null> {
   // Check cache
   const cached = await prisma.company.findUnique({ where: { ticker } });
-  if (cached && !isCacheStale(cached.updatedAt)) {
+  if (cached && cached.price && cached.price > 0 && !isCacheStale(cached.updatedAt)) {
     return {
       ticker: cached.ticker,
       name: cached.name,
@@ -29,7 +29,7 @@ export async function getCompanyData(ticker: string): Promise<CompanyProfile | n
       industry: cached.industry,
       marketCap: cached.marketCap || 0,
       exchange: cached.exchange,
-      price: cached.price || 0,
+      price: cached.price,
     };
   }
 
@@ -84,7 +84,8 @@ export async function getFinancials(ticker: string): Promise<FinancialData[]> {
 
   if (company?.financials && company.financials.length > 0) {
     const newest = company.financials[0];
-    if (!isCacheStale(newest.fetchedAt)) {
+    const hasRealData = company.financials.some((f) => f.pe != null || f.eps != null || f.revenue != null);
+    if (hasRealData && !isCacheStale(newest.fetchedAt)) {
       return company.financials.map(mapFinancialFromDB);
     }
   }
