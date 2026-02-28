@@ -107,9 +107,11 @@ export async function getFinancials(ticker: string): Promise<FinancialData[]> {
   let financials: FinancialData[];
 
   if (useMockData()) {
-    // Try EDGAR first (longest history ~15 years), then Yahoo, then mock
-    const edgarFinancials = await edgar.getEdgarFinancials(ticker);
-    const yahooFinancials = await yahooV2.getYahooV2Financials(ticker);
+    // Fetch EDGAR and Yahoo in parallel for speed
+    const [edgarFinancials, yahooFinancials] = await Promise.all([
+      edgar.getEdgarFinancials(ticker).catch(() => [] as FinancialData[]),
+      yahooV2.getYahooV2Financials(ticker).catch(() => [] as FinancialData[]),
+    ]);
 
     if (edgarFinancials.length === 0 && yahooFinancials.length === 0) {
       financials = mock.getMockFinancials(ticker);

@@ -1,19 +1,31 @@
 {
   "functions": {
+    "src/app/company/**": {
+      "maxDuration": 60
+    },
+    "src/app/comparables/**": {
+      "maxDuration": 60
+    },
+    "src/app/sectors/**": {
+      "maxDuration": 60
+    },
     "src/app/api/ai/**": {
       "maxDuration": 60
     },
     "src/app/api/valuation/**": {
-      "maxDuration": 30
+      "maxDuration": 60
     },
     "src/app/api/financials/**": {
-      "maxDuration": 30
+      "maxDuration": 60
     },
     "src/app/api/companies/**": {
-      "maxDuration": 30
+      "maxDuration": 60
     },
     "src/app/api/portfolio/**": {
-      "maxDuration": 30
+      "maxDuration": 60
+    },
+    "src/app/api/seed/**": {
+      "maxDuration": 60
     }
   }
 }

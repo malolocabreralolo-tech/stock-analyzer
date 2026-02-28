@@ -30,7 +30,13 @@ async function rateLimitedFetch(url: string): Promise<Response> {
     await new Promise((resolve) => setTimeout(resolve, MIN_REQUEST_INTERVAL_MS - elapsed));
   }
   lastRequestTime = Date.now();
-  return fetch(url, { headers: SEC_HEADERS });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10_000);
+  try {
+    return await fetch(url, { headers: SEC_HEADERS, signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 // ─── CIK Mapping ─────────────────────────────────────────────────────────────

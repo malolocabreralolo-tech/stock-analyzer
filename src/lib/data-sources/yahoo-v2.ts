@@ -4,11 +4,26 @@ import { CompanyProfile, DynamicRatioPoint, FinancialData, HistoricalPrice } fro
 
 const yf = new YahooFinance();
 
+/** Run a promise with a timeout. Rejects with an error if it takes too long. */
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`[yahoo-v2] ${label} timed out after ${ms}ms`)), ms);
+    promise.then(
+      (val) => { clearTimeout(timer); resolve(val); },
+      (err) => { clearTimeout(timer); reject(err); },
+    );
+  });
+}
+
 export async function getYahooV2Profile(ticker: string): Promise<CompanyProfile | null> {
   try {
-    const result: any = await yf.quoteSummary(ticker, {
-      modules: ['price', 'summaryDetail', 'assetProfile', 'quoteType'],
-    });
+    const result: any = await withTimeout(
+      yf.quoteSummary(ticker, {
+        modules: ['price', 'summaryDetail', 'assetProfile', 'quoteType'],
+      }),
+      8_000,
+      `quoteSummary(${ticker})`,
+    );
 
     const price = result.price;
     const profile = result.assetProfile;
@@ -34,30 +49,34 @@ export async function getYahooV2Financials(ticker: string): Promise<FinancialDat
     // Use fundamentalsTimeSeries (income statement history modules are deprecated since Nov 2024)
     const historyStart = new Date('2000-01-01');
 
-    const [financialsData, balanceSheetData, cashFlowData, summary, chartResult]: [any[], any[], any[], any, any] = await Promise.all([
-      yf.fundamentalsTimeSeries(ticker, {
-        period1: historyStart,
-        type: 'annual',
-        module: 'financials',
-      }),
-      yf.fundamentalsTimeSeries(ticker, {
-        period1: historyStart,
-        type: 'annual',
-        module: 'balance-sheet',
-      }),
-      yf.fundamentalsTimeSeries(ticker, {
-        period1: historyStart,
-        type: 'annual',
-        module: 'cash-flow',
-      }),
-      yf.quoteSummary(ticker, {
-        modules: ['defaultKeyStatistics', 'financialData', 'summaryDetail'],
-      }),
-      yf.chart(ticker, {
-        period1: historyStart,
-        interval: '1d',
-      }),
-    ]);
+    const [financialsData, balanceSheetData, cashFlowData, summary, chartResult]: [any[], any[], any[], any, any] = await withTimeout(
+      Promise.all([
+        yf.fundamentalsTimeSeries(ticker, {
+          period1: historyStart,
+          type: 'annual',
+          module: 'financials',
+        }),
+        yf.fundamentalsTimeSeries(ticker, {
+          period1: historyStart,
+          type: 'annual',
+          module: 'balance-sheet',
+        }),
+        yf.fundamentalsTimeSeries(ticker, {
+          period1: historyStart,
+          type: 'annual',
+          module: 'cash-flow',
+        }),
+        yf.quoteSummary(ticker, {
+          modules: ['defaultKeyStatistics', 'financialData', 'summaryDetail'],
+        }),
+        yf.chart(ticker, {
+          period1: historyStart,
+          interval: '1wk',
+        }),
+      ]),
+      20_000,
+      `financials(${ticker})`,
+    );
 
     // Merge rows from 3 modules by date into unified snapshots
     const mergedMap = new Map<string, any>();
@@ -251,10 +270,14 @@ export async function getYahooV2HistoricalPrices(ticker: string): Promise<Histor
   try {
     const historyStart = new Date('2000-01-01');
 
-    const result: any = await yf.chart(ticker, {
-      period1: historyStart,
-      interval: '1d',
-    });
+    const result: any = await withTimeout(
+      yf.chart(ticker, {
+        period1: historyStart,
+        interval: '1d',
+      }),
+      15_000,
+      `historicalPrices(${ticker})`,
+    );
 
     if (!result?.quotes || result.quotes.length === 0) return [];
 
@@ -294,10 +317,14 @@ export async function getYahooV2SplitHistory(ticker: string): Promise<SplitEvent
   try {
     const historyStart = new Date('2000-01-01');
 
-    const result: any = await yf.chart(ticker, {
-      period1: historyStart,
-      interval: '1d',
-    });
+    const result: any = await withTimeout(
+      yf.chart(ticker, {
+        period1: historyStart,
+        interval: '1d',
+      }),
+      15_000,
+      `splitHistory(${ticker})`,
+    );
 
     const rawSplits: any[] = result?.events?.splits ?? [];
     const splits: SplitEvent[] = [];
@@ -349,42 +376,46 @@ export async function getYahooV2DynamicRatios(ticker: string): Promise<DynamicRa
       annualFinancials, annualBalanceSheet, annualCashFlow,
       quarterlyFinancials, quarterlyBalanceSheet, quarterlyCashFlow,
       chartResult,
-    ]: [any[], any[], any[], any[], any[], any[], any] = await Promise.all([
-      yf.fundamentalsTimeSeries(ticker, {
-        period1: historyStart,
-        type: 'annual',
-        module: 'financials',
-      }),
-      yf.fundamentalsTimeSeries(ticker, {
-        period1: historyStart,
-        type: 'annual',
-        module: 'balance-sheet',
-      }),
-      yf.fundamentalsTimeSeries(ticker, {
-        period1: historyStart,
-        type: 'annual',
-        module: 'cash-flow',
-      }),
-      yf.fundamentalsTimeSeries(ticker, {
-        period1: historyStart,
-        type: 'quarterly',
-        module: 'financials',
-      }),
-      yf.fundamentalsTimeSeries(ticker, {
-        period1: historyStart,
-        type: 'quarterly',
-        module: 'balance-sheet',
-      }),
-      yf.fundamentalsTimeSeries(ticker, {
-        period1: historyStart,
-        type: 'quarterly',
-        module: 'cash-flow',
-      }),
-      yf.chart(ticker, {
-        period1: historyStart,
-        interval: '1d',
-      }),
-    ]);
+    ]: [any[], any[], any[], any[], any[], any[], any] = await withTimeout(
+      Promise.all([
+        yf.fundamentalsTimeSeries(ticker, {
+          period1: historyStart,
+          type: 'annual',
+          module: 'financials',
+        }),
+        yf.fundamentalsTimeSeries(ticker, {
+          period1: historyStart,
+          type: 'annual',
+          module: 'balance-sheet',
+        }),
+        yf.fundamentalsTimeSeries(ticker, {
+          period1: historyStart,
+          type: 'annual',
+          module: 'cash-flow',
+        }),
+        yf.fundamentalsTimeSeries(ticker, {
+          period1: historyStart,
+          type: 'quarterly',
+          module: 'financials',
+        }),
+        yf.fundamentalsTimeSeries(ticker, {
+          period1: historyStart,
+          type: 'quarterly',
+          module: 'balance-sheet',
+        }),
+        yf.fundamentalsTimeSeries(ticker, {
+          period1: historyStart,
+          type: 'quarterly',
+          module: 'cash-flow',
+        }),
+        yf.chart(ticker, {
+          period1: historyStart,
+          interval: '1wk',
+        }),
+      ]),
+      25_000,
+      `dynamicRatios(${ticker})`,
+    );
 
     // Merge annual rows from 3 modules by date
     const annualMergedMap = new Map<string, any>();
@@ -598,7 +629,7 @@ export async function getYahooV2DynamicRatios(ticker: string): Promise<DynamicRa
 
 export async function searchYahooV2(query: string): Promise<Array<{ symbol: string; name: string }>> {
   try {
-    const result: any = await yf.search(query);
+    const result: any = await withTimeout(yf.search(query), 5_000, `search(${query})`);
     return (result.quotes || [])
       .filter((q: any) => q.symbol && typeof q.symbol === 'string')
       .map((q: any) => ({
