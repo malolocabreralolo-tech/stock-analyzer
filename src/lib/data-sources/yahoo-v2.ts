@@ -52,14 +52,20 @@ export async function getYahooV2Financials(ticker: string): Promise<FinancialDat
     const finData = summary?.financialData;
     const summaryDetail = summary?.summaryDetail;
 
-    // Sort by date descending (most recent first)
-    const sorted = [...allData].sort((a: any, b: any) => {
+    // Filter out rows with no meaningful data, then sort by date descending
+    const meaningful = allData.filter((row: any) =>
+      safeNum(row.totalRevenue) != null || safeNum(row.netIncome) != null || safeNum(row.totalAssets) != null
+    );
+    const sorted = meaningful.sort((a: any, b: any) => {
       const da = a.date instanceof Date ? a.date.getTime() : 0;
       const db = b.date instanceof Date ? b.date.getTime() : 0;
       return db - da;
     });
 
-    const financials: FinancialData[] = sorted.map((row: any, i: number) => {
+    if (sorted.length === 0) return [];
+
+    let valuationApplied = false;
+    const financials: FinancialData[] = sorted.map((row: any) => {
       const date = row.date instanceof Date ? row.date : new Date(row.date);
       const year = date.getFullYear();
 
@@ -85,11 +91,14 @@ export async function getYahooV2Financials(ticker: string): Promise<FinancialDat
       const roe = totalEquity && netIncome ? netIncome / totalEquity : null;
       const debtToEquity = totalEquity && totalDebt ? totalDebt / totalEquity : null;
 
-      // Only apply current valuation ratios to most recent year
-      const pe = i === 0 ? safeNum(summaryDetail?.trailingPE) : null;
-      const evEbitda = i === 0 ? safeNum(keyStats?.enterpriseToEbitda) : null;
-      const pb = i === 0 ? safeNum(keyStats?.priceToBook) : null;
-      const ps = i === 0 && revenue
+      // Apply current valuation ratios to the most recent year that has revenue
+      const isValuationRow = !valuationApplied && revenue != null;
+      if (isValuationRow) valuationApplied = true;
+
+      const pe = isValuationRow ? safeNum(summaryDetail?.trailingPE) : null;
+      const evEbitda = isValuationRow ? safeNum(keyStats?.enterpriseToEbitda) : null;
+      const pb = isValuationRow ? safeNum(keyStats?.priceToBook) : null;
+      const ps = isValuationRow && revenue
         ? ((finData?.currentPrice || 0) * (keyStats?.sharesOutstanding || 0)) / revenue
         : null;
 
@@ -106,7 +115,7 @@ export async function getYahooV2Financials(ticker: string): Promise<FinancialDat
         totalDebt,
         totalEquity,
         totalAssets,
-        bookValuePerShare: i === 0 ? safeNum(keyStats?.bookValue) : null,
+        bookValuePerShare: isValuationRow ? safeNum(keyStats?.bookValue) : null,
         pe,
         evEbitda,
         pb,
@@ -114,13 +123,13 @@ export async function getYahooV2Financials(ticker: string): Promise<FinancialDat
         roe,
         roic: null,
         debtToEquity,
-        currentRatio: i === 0 ? safeNum(finData?.currentRatio) : null,
+        currentRatio: isValuationRow ? safeNum(finData?.currentRatio) : null,
         grossMargin,
         operatingMargin,
         netMargin,
         revenueGrowth: null,
         epsGrowth: null,
-        dividendYield: i === 0 ? safeNum(summaryDetail?.dividendYield) : null,
+        dividendYield: isValuationRow ? safeNum(summaryDetail?.dividendYield) : null,
       };
     });
 
