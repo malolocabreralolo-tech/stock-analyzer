@@ -47,6 +47,10 @@ export async function getCompanyData(ticker: string): Promise<CompanyProfile | n
     if (!profile) {
       profile = await yahoo.getYahooProfile(ticker);
     }
+    // Fall back to yahoo-finance2 if FMP and Yahoo v1 both fail
+    if (!profile) {
+      profile = await yahooV2.getYahooV2Profile(ticker);
+    }
   }
 
   // Fall back to cached DB record if fresh fetch fails
@@ -185,6 +189,23 @@ export async function getFinancials(ticker: string): Promise<FinancialData[]> {
       }
       if (current.eps && previous.eps && previous.eps !== 0) {
         current.epsGrowth = (current.eps - previous.eps) / Math.abs(previous.eps);
+      }
+    }
+
+    // If FMP returned nothing, fall back to EDGAR + Yahoo
+    if (financials.length === 0) {
+      const [edgarFinancials, yahooFinancials] = await Promise.all([
+        edgar.getEdgarFinancials(ticker).catch(() => [] as FinancialData[]),
+        yahooV2.getYahooV2Financials(ticker).catch(() => [] as FinancialData[]),
+      ]);
+
+      if (edgarFinancials.length > 0 || yahooFinancials.length > 0) {
+        const mergedMap = new Map<string, FinancialData>();
+        for (const f of edgarFinancials) mergedMap.set(f.period, f);
+        for (const f of yahooFinancials) mergedMap.set(f.period, f);
+        financials = Array.from(mergedMap.values()).sort((a, b) =>
+          (b.periodDate ?? b.period).localeCompare(a.periodDate ?? a.period)
+        );
       }
     }
   }
