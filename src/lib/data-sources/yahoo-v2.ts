@@ -274,6 +274,64 @@ export async function getYahooV2HistoricalPrices(ticker: string): Promise<Histor
   }
 }
 
+/** A single stock split event. */
+export interface SplitEvent {
+  /** ISO date string (YYYY-MM-DD) when the split took effect. */
+  date: string;
+  /** Split factor: new shares per old share (e.g. 7 for a 7:1 split). */
+  factor: number;
+}
+
+/**
+ * Fetch historical stock split events for a ticker from the Yahoo Finance chart
+ * endpoint. Returns events sorted ascending by date.
+ *
+ * The split events are embedded in `chart.events.splits` and each entry has
+ * `numerator` / `denominator` fields representing the ratio (e.g. numerator=7,
+ * denominator=1 for a 7:1 split where each old share becomes 7 new shares).
+ */
+export async function getYahooV2SplitHistory(ticker: string): Promise<SplitEvent[]> {
+  try {
+    const historyStart = new Date('2000-01-01');
+
+    const result: any = await yf.chart(ticker, {
+      period1: historyStart,
+      interval: '1d',
+    });
+
+    const rawSplits: any[] = result?.events?.splits ?? [];
+    const splits: SplitEvent[] = [];
+
+    for (const s of rawSplits) {
+      // date may be a Date object or a string/number
+      let dateStr: string;
+      if (s.date instanceof Date) {
+        dateStr = s.date.toISOString().split('T')[0];
+      } else if (typeof s.date === 'string' && s.date.length >= 10) {
+        dateStr = s.date.substring(0, 10);
+      } else if (typeof s.date === 'number') {
+        dateStr = new Date(s.date * 1000).toISOString().split('T')[0];
+      } else {
+        continue; // skip malformed entries
+      }
+
+      // numerator / denominator give the split ratio (e.g. 7 / 1 = 7:1 split)
+      const numerator = Number(s.numerator);
+      const denominator = Number(s.denominator);
+      if (!isFinite(numerator) || !isFinite(denominator) || denominator === 0) continue;
+
+      splits.push({ date: dateStr, factor: numerator / denominator });
+    }
+
+    // Sort ascending by date so callers can process them in chronological order
+    splits.sort((a, b) => a.date.localeCompare(b.date));
+    return splits;
+  } catch (e) {
+    console.error(`[yahoo-v2] Failed to fetch split history for ${ticker}:`, e);
+    return [];
+  }
+}
+
 /**
  * Generate a dynamic ratio time series (monthly) combining:
  * - Quarterly/annual financial snapshots (static, updated each earnings report)

@@ -3,6 +3,7 @@ import { CompanyProfile, DynamicRatioPoint, FinancialData, HistoricalPrice } fro
 import * as fmp from './fmp';
 import * as yahoo from './yahoo';
 import * as yahooV2 from './yahoo-v2';
+import * as edgar from './edgar';
 import * as mock from './mock';
 import { getSP500FromWikipedia } from './sp500-wiki';
 
@@ -91,10 +92,34 @@ export async function getFinancials(ticker: string): Promise<FinancialData[]> {
   let financials: FinancialData[];
 
   if (useMockData()) {
-    // Try yahoo-finance2 first for real data, then fall back to mock
-    financials = await yahooV2.getYahooV2Financials(ticker);
-    if (financials.length === 0) {
+    // Try EDGAR first (longest history ~15 years), then Yahoo, then mock
+    const edgarFinancials = await edgar.getEdgarFinancials(ticker);
+    const yahooFinancials = await yahooV2.getYahooV2Financials(ticker);
+
+    if (edgarFinancials.length === 0 && yahooFinancials.length === 0) {
       financials = mock.getMockFinancials(ticker);
+    } else {
+      // Merge: EDGAR as base, overlay Yahoo data for any overlapping or more recent periods
+      // Yahoo may have more accurate/recent data for the current fiscal year
+      const mergedMap = new Map<string, FinancialData>();
+
+      // Add EDGAR data first (older, longer history)
+      for (const f of edgarFinancials) {
+        mergedMap.set(f.period, f);
+      }
+
+      // Overlay Yahoo data (may have more recent or more accurate current-year data)
+      for (const f of yahooFinancials) {
+        mergedMap.set(f.period, f);
+      }
+
+      financials = Array.from(mergedMap.values()).sort((a, b) =>
+        (b.periodDate ?? b.period).localeCompare(a.periodDate ?? a.period)
+      );
+
+      if (financials.length === 0) {
+        financials = mock.getMockFinancials(ticker);
+      }
     }
   } else {
     // Fetch fresh data from FMP
@@ -199,7 +224,13 @@ export async function searchCompanies(query: string) {
 }
 
 export async function getDynamicRatios(ticker: string): Promise<DynamicRatioPoint[]> {
-  // Dynamic ratios are only available via yahoo-finance2
+  // Try EDGAR first (longer history ~15 years), fall back to Yahoo
+  try {
+    const edgarRatios = await edgar.getEdgarDynamicRatios(ticker);
+    if (edgarRatios.length > 0) return edgarRatios;
+  } catch (e) {
+    console.error(`[aggregator] EDGAR dynamic ratios failed for ${ticker}:`, e);
+  }
   try {
     return await yahooV2.getYahooV2DynamicRatios(ticker);
   } catch {
