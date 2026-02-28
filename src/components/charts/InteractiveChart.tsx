@@ -51,10 +51,10 @@ const DYNAMIC_KEYS = new Set([
 ]);
 
 const PRESETS: { label: string; keys: string[] }[] = [
-  { label: 'Valoración', keys: ['pe', 'evEbitda', 'pb'] },
-  { label: 'Rentabilidad', keys: ['roe', 'grossMargin', 'operatingMargin', 'netMargin'] },
-  { label: 'Deuda', keys: ['debtToEquity', 'netDebtToEbitda'] },
-  { label: 'Crecimiento', keys: ['revenue', 'netIncome', 'ebitda'] },
+  { label: 'Valuation', keys: ['pe', 'evEbitda', 'pb'] },
+  { label: 'Profitability', keys: ['roe', 'grossMargin', 'operatingMargin', 'netMargin'] },
+  { label: 'Leverage', keys: ['debtToEquity', 'netDebtToEbitda'] },
+  { label: 'Growth', keys: ['revenue', 'netIncome', 'ebitda'] },
 ];
 
 type TimeRange = '1M' | '3M' | '6M' | 'YTD' | '1Y' | '3Y' | '5Y' | '10Y' | '20Y' | 'MAX';
@@ -267,7 +267,7 @@ export default function InteractiveChart({ financials, dynamicRatios = [] }: Int
           onClick={clearAll}
           className="px-3 py-1.5 text-xs font-medium rounded-full border border-destructive text-destructive hover:bg-destructive/10 transition-colors"
         >
-          Limpiar
+          Clear
         </button>
       </div>
 
@@ -275,7 +275,7 @@ export default function InteractiveChart({ financials, dynamicRatios = [] }: Int
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">
-            Valores Absolutos (Eje Izq.)
+            Absolute Values (Left Axis)
           </p>
           <div className="flex flex-wrap gap-1.5">
             {absoluteMetrics.map((m) => (
@@ -299,7 +299,7 @@ export default function InteractiveChart({ financials, dynamicRatios = [] }: Int
         </div>
         <div>
           <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">
-            Ratios / Porcentajes (Eje Der.)
+            Ratios / Percentages (Right Axis)
           </p>
           <div className="flex flex-wrap gap-1.5">
             {ratioMetrics.map((m) => (
@@ -326,7 +326,7 @@ export default function InteractiveChart({ financials, dynamicRatios = [] }: Int
       {/* Chart */}
       {activeConfigs.length === 0 ? (
         <div className="h-[450px] flex items-center justify-center text-muted-foreground text-sm border rounded-lg">
-          Selecciona métricas para visualizar
+          Select metrics to visualize
         </div>
       ) : (
         <ResponsiveContainer width="100%" height={450}>

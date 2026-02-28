@@ -2,15 +2,14 @@ import prisma from '@/lib/db';
 import { seedMockData } from '@/lib/seed';
 import CompanyCard from '@/components/company/CompanyCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import DashboardFilters from '@/components/DashboardFilters';
 import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
 
 async function getDashboardData() {
-  // Auto-seed S&P 500 company list on first load
   await seedMockData();
 
-  // Fetch all companies (profile only) and their most recent valuation (if any)
   const allCompanies = await prisma.company.findMany({
     include: {
       valuations: {
@@ -21,7 +20,6 @@ async function getDashboardData() {
     orderBy: [{ sector: 'asc' }, { ticker: 'asc' }],
   });
 
-  // Build sector map: sector -> list of companies (with optional valuation)
   const sectorMap: Record<
     string,
     {
@@ -86,7 +84,6 @@ async function getDashboardData() {
     .sort((a, b) => a.upsidePercent - b.upsidePercent)
     .slice(0, 10);
 
-  // Sector summary for the overview cards
   const sectorSummaries = Object.entries(sectorMap)
     .map(([sector, companies]) => {
       const withUpside = companies.filter((c) => c.upsidePercent !== null);
@@ -117,33 +114,42 @@ export default async function Dashboard() {
   const { sectorMap, sectorSummaries, undervalued, overvalued, totalCompanies, analyzedCount } =
     await getDashboardData();
 
+  const sectors = Object.keys(sectorMap).sort();
+
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">S&amp;P 500 Stock Analyzer</h1>
-        <p className="text-muted-foreground mt-1">
-          {totalCompanies > 0
-            ? `${totalCompanies} companies across ${sectorSummaries.length} sectors — ${analyzedCount} analyzed`
-            : 'Loading S&P 500 company list…'}
-        </p>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-end justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">S&P 500 Dashboard</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {totalCompanies > 0
+              ? `${totalCompanies} companies \u00b7 ${sectorSummaries.length} sectors \u00b7 ${analyzedCount} analyzed`
+              : 'Loading S&P 500 company list\u2026'}
+          </p>
+        </div>
       </div>
 
       {totalCompanies === 0 && (
         <Card>
           <CardContent className="p-12 text-center">
-            <h2 className="text-xl font-semibold mb-2">Welcome to Stock Analyzer</h2>
-            <p className="text-muted-foreground max-w-md mx-auto">
-              The S&amp;P 500 company list is being loaded. Refresh the page in a moment. You can
+            <h2 className="text-lg font-semibold mb-2">Welcome to Stock Analyzer</h2>
+            <p className="text-muted-foreground text-sm max-w-md mx-auto">
+              The S&P 500 company list is being loaded. Refresh the page in a moment. You can
               also search for any US stock ticker above.
             </p>
           </CardContent>
         </Card>
       )}
 
+      {/* Top Undervalued */}
       {undervalued.length > 0 && (
         <section>
-          <h2 className="text-xl font-semibold mb-4">Top Undervalued</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+          <h2 className="text-base font-semibold mb-3 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+            Top Undervalued
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
             {undervalued.map((c) => (
               <CompanyCard key={c.ticker} {...c} />
             ))}
@@ -151,10 +157,14 @@ export default async function Dashboard() {
         </section>
       )}
 
+      {/* Top Overvalued */}
       {overvalued.length > 0 && (
         <section>
-          <h2 className="text-xl font-semibold mb-4">Top Overvalued</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+          <h2 className="text-base font-semibold mb-3 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-red-500" />
+            Top Overvalued
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
             {overvalued.map((c) => (
               <CompanyCard key={c.ticker} {...c} />
             ))}
@@ -165,34 +175,34 @@ export default async function Dashboard() {
       {/* Sector Overview */}
       {sectorSummaries.length > 0 && (
         <section>
-          <h2 className="text-xl font-semibold mb-4">Sector Overview</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <h2 className="text-base font-semibold mb-3">Sector Overview</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
             {sectorSummaries.map((s) => (
-              <Card key={s.sector}>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium">{s.sector}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex justify-between items-end">
+              <Card key={s.sector} className="hover:bg-accent/30 transition-colors">
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between">
                     <div>
-                      {s.avgUpside !== null ? (
-                        <>
-                          <p className="text-2xl font-bold">
-                            <span className={s.avgUpside >= 0 ? 'text-green-600' : 'text-red-600'}>
-                              {s.avgUpside >= 0 ? '+' : ''}
-                              {s.avgUpside.toFixed(1)}%
-                            </span>
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            Avg. upside ({s.analyzedCount} analyzed)
-                          </p>
-                        </>
-                      ) : (
-                        <p className="text-xs text-muted-foreground">Not yet analyzed</p>
-                      )}
+                      <p className="text-sm font-semibold">{s.sector}</p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">
+                        {s.totalCount} companies &middot; {s.analyzedCount} analyzed
+                      </p>
                     </div>
-                    <p className="text-sm text-muted-foreground">{s.totalCount} companies</p>
+                    {s.avgUpside !== null && (
+                      <span className={`text-lg font-bold tabular-nums ${
+                        s.avgUpside >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'
+                      }`}>
+                        {s.avgUpside >= 0 ? '+' : ''}{s.avgUpside.toFixed(1)}%
+                      </span>
+                    )}
                   </div>
+                  {s.avgUpside !== null && (
+                    <div className="mt-2 h-1 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full ${s.avgUpside >= 0 ? 'bg-emerald-500' : 'bg-red-500'}`}
+                        style={{ width: `${Math.min(100, Math.abs(s.avgUpside) * 2)}%` }}
+                      />
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             ))}
@@ -200,47 +210,9 @@ export default async function Dashboard() {
         </section>
       )}
 
-      {/* All Companies by Sector */}
+      {/* All Companies with Filters */}
       {Object.keys(sectorMap).length > 0 && (
-        <section>
-          <h2 className="text-xl font-semibold mb-4">All S&amp;P 500 Companies</h2>
-          <div className="space-y-6">
-            {Object.entries(sectorMap)
-              .sort(([a], [b]) => a.localeCompare(b))
-              .map(([sector, companies]) => (
-                <div key={sector}>
-                  <h3 className="text-base font-semibold mb-3 text-muted-foreground border-b pb-1">
-                    {sector}{' '}
-                    <span className="text-sm font-normal">({companies.length} companies)</span>
-                  </h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-2">
-                    {companies.map((c) => (
-                      <Link
-                        key={c.ticker}
-                        href={`/company/${c.ticker}`}
-                        className="block rounded-md border p-2 hover:bg-accent transition-colors"
-                      >
-                        <p className="font-mono text-sm font-bold">{c.ticker}</p>
-                        <p className="text-xs text-muted-foreground truncate" title={c.name}>
-                          {c.name}
-                        </p>
-                        {c.hasValuation && c.upsidePercent !== null && (
-                          <p
-                            className={`text-xs font-semibold mt-1 ${
-                              c.rating === 'undervalued' ? 'text-green-600' : c.rating === 'overvalued' ? 'text-red-600' : 'text-yellow-600'
-                            }`}
-                          >
-                            {c.upsidePercent >= 0 ? '+' : ''}
-                            {c.upsidePercent.toFixed(1)}%
-                          </p>
-                        )}
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-              ))}
-          </div>
-        </section>
+        <DashboardFilters sectorMap={sectorMap} sectors={sectors} />
       )}
     </div>
   );
