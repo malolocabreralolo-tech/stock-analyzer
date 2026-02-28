@@ -21,7 +21,8 @@ function isCacheStale(date: Date): boolean {
 export async function getCompanyData(ticker: string): Promise<CompanyProfile | null> {
   // Check cache
   const cached = await prisma.company.findUnique({ where: { ticker } });
-  if (cached && cached.price && cached.price > 0 && !isCacheStale(cached.updatedAt)) {
+  const hasFreshRealData = cached && cached.price && cached.price > 0 && !isCacheStale(cached.updatedAt);
+  if (hasFreshRealData) {
     return {
       ticker: cached.ticker,
       name: cached.name,
@@ -29,7 +30,7 @@ export async function getCompanyData(ticker: string): Promise<CompanyProfile | n
       industry: cached.industry,
       marketCap: cached.marketCap || 0,
       exchange: cached.exchange,
-      price: cached.price,
+      price: cached.price!,
     };
   }
 
@@ -46,6 +47,19 @@ export async function getCompanyData(ticker: string): Promise<CompanyProfile | n
     if (!profile) {
       profile = await yahoo.getYahooProfile(ticker);
     }
+  }
+
+  // Fall back to cached DB record if fresh fetch fails
+  if (!profile && cached) {
+    return {
+      ticker: cached.ticker,
+      name: cached.name,
+      sector: cached.sector,
+      industry: cached.industry,
+      marketCap: cached.marketCap || 0,
+      exchange: cached.exchange,
+      price: cached.price || 0,
+    };
   }
 
   if (!profile) return null;
