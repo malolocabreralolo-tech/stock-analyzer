@@ -86,6 +86,7 @@ export default function ComparablesTable({ companies, sectorMedians }: Comparabl
               Ticker <ArrowUpDown className="w-3 h-3 inline opacity-50" />
             </TableHead>
             <TableHead>Name</TableHead>
+            <TableHead>Country</TableHead>
             <SortHeader label="Mkt Cap" field="marketCap" />
             <SortHeader label="Price" field="price" />
             <SortHeader label="Fair Value" field="fairValue" />
@@ -109,6 +110,7 @@ export default function ComparablesTable({ companies, sectorMedians }: Comparabl
                 </Link>
               </TableCell>
               <TableCell className="text-sm max-w-[180px] truncate">{c.name}</TableCell>
+              <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{c.country ?? 'US'}</TableCell>
               <TableCell className="text-right tabular-nums">{formatMarketCap(c.marketCap)}</TableCell>
               <TableCell className="text-right tabular-nums">${c.price.toFixed(2)}</TableCell>
               <TableCell className="text-right tabular-nums">${c.fairValue.toFixed(2)}</TableCell>
@@ -151,7 +153,7 @@ export default function ComparablesTable({ companies, sectorMedians }: Comparabl
 
           {/* Sector Median Row */}
           <TableRow className="bg-muted/30 font-semibold border-t-2">
-            <TableCell colSpan={2} className="text-xs uppercase tracking-wider text-muted-foreground">
+            <TableCell colSpan={3} className="text-xs uppercase tracking-wider text-muted-foreground">
               Sector Median
             </TableCell>
             <TableCell colSpan={4} />

@@ -31,6 +31,7 @@ export async function getCompanyData(ticker: string): Promise<CompanyProfile | n
       marketCap: cached.marketCap || 0,
       exchange: cached.exchange,
       price: cached.price!,
+      country: cached.country ?? 'US',
     };
   }
 
@@ -63,15 +64,22 @@ export async function getCompanyData(ticker: string): Promise<CompanyProfile | n
       marketCap: cached.marketCap || 0,
       exchange: cached.exchange,
       price: cached.price || 0,
+      country: cached.country ?? 'US',
     };
   }
 
   if (!profile) return null;
 
-  // Preserve existing sector/industry from DB (Wikipedia GICS) over API values
+  // Preserve existing sector/industry/country from DB (Wikipedia GICS) over API values
   if (cached) {
     profile.sector = cached.sector || profile.sector;
     profile.industry = cached.industry || profile.industry;
+    // Preserve DB country unless profile has a non-US country from the API
+    if (cached.country && cached.country !== 'US') {
+      profile.country = cached.country;
+    } else {
+      profile.country = profile.country || cached.country || 'US';
+    }
   }
 
   // Upsert into DB
@@ -93,6 +101,7 @@ export async function getCompanyData(ticker: string): Promise<CompanyProfile | n
       marketCap: profile.marketCap,
       exchange: profile.exchange,
       price: profile.price,
+      country: profile.country ?? 'US',
     },
   });
 

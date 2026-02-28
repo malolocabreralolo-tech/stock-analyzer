@@ -66,6 +66,7 @@ export default async function SectorComparablesPage({ params }: PageProps) {
         netMargin: f?.netMargin ?? null,
         debtToEquity: f?.debtToEquity ?? null,
         revenueGrowth: f?.revenueGrowth ?? null,
+        country: c.country ?? 'US',
       };
     });
 

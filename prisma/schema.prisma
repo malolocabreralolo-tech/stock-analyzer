@@ -16,6 +16,7 @@ model Company {
   marketCap Float?
   exchange  String
   price     Float?
+  country   String  @default("US")
   updatedAt DateTime @updatedAt
   createdAt DateTime @default(now())
 

@@ -129,6 +129,9 @@ export default async function CompanyPage({ params }: PageProps) {
             <div className="flex items-center gap-3 flex-wrap">
               <h1 className="text-2xl font-bold tracking-tight">{upperTicker}</h1>
               <Badge variant="secondary" className="font-mono text-[10px]">{profile.exchange}</Badge>
+              {profile.country && profile.country !== 'US' && (
+                <Badge variant="outline" className="text-[10px]">{profile.country}</Badge>
+              )}
               <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md border text-xs font-bold uppercase ${ratingColor}`}>
                 {valuation.rating}
                 <span className="ml-1.5 font-mono">

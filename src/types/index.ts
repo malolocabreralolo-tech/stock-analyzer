@@ -143,6 +143,7 @@ export interface ComparableCompany {
   netMargin: number | null;
   debtToEquity: number | null;
   revenueGrowth: number | null;
+  country?: string;
 }
 
 export interface PortfolioPosition {
