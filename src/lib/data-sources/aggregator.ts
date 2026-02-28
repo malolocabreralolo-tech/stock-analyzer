@@ -68,6 +68,12 @@ export async function getCompanyData(ticker: string): Promise<CompanyProfile | n
 
   if (!profile) return null;
 
+  // Preserve existing sector/industry from DB (Wikipedia GICS) over API values
+  if (cached) {
+    profile.sector = cached.sector || profile.sector;
+    profile.industry = cached.industry || profile.industry;
+  }
+
   // Upsert into DB
   await prisma.company.upsert({
     where: { ticker },

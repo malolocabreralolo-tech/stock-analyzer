@@ -4,8 +4,7 @@ import { getSP500FromWikipedia } from './data-sources/sp500-wiki';
 let seedInProgress = false;
 
 export async function seedMockData() {
-  const existingCount = await prisma.company.count();
-  if (existingCount >= 100) return; // Already seeded with S&P 500
+  // Always re-seed to ensure sector/industry names stay consistent with Wikipedia GICS
 
   // Prevent concurrent seed calls
   if (seedInProgress) return;
