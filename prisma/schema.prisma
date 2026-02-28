@@ -1,0 +1,103 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Company {
+  id        String   @id @default(cuid())
+  ticker    String   @unique
+  name      String
+  sector    String
+  industry  String
+  marketCap Float?
+  exchange  String
+  price     Float?
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  financials Financial[]
+  valuations Valuation[]
+
+  @@index([sector])
+  @@index([exchange])
+}
+
+model Financial {
+  id              String   @id @default(cuid())
+  companyId       String
+  company         Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  period          String
+  periodDate      DateTime?
+  revenue         Float?
+  netIncome       Float?
+  freeCashFlow    Float?
+  totalDebt       Float?
+  totalEquity     Float?
+  totalAssets     Float?
+  pe              Float?
+  evEbitda        Float?
+  pb              Float?
+  ps              Float?
+  roe             Float?
+  roic            Float?
+  debtToEquity    Float?
+  currentRatio    Float?
+  grossMargin     Float?
+  operatingMargin Float?
+  netMargin       Float?
+  revenueGrowth   Float?
+  epsGrowth       Float?
+  dividendYield   Float?
+  ebitda          Float?
+  eps             Float?
+  bookValuePerShare Float?
+  operatingCashFlow Float?
+  capitalExpenditure Float?
+  source          String
+  fetchedAt       DateTime @default(now())
+
+  @@unique([companyId, period])
+  @@index([companyId])
+  @@index([period])
+}
+
+model Valuation {
+  id             String   @id @default(cuid())
+  companyId      String
+  company        Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  currentPrice   Float
+  dcfValue       Float?
+  multiplesValue Float?
+  compositeValue Float
+  upsidePercent  Float
+  rating         String
+  confidence     Float?
+  calculatedAt   DateTime @default(now())
+
+  @@index([companyId])
+  @@index([rating])
+  @@index([upsidePercent])
+}
+
+model Portfolio {
+  id        String     @id @default(cuid())
+  name      String
+  createdAt DateTime   @default(now())
+  positions Position[]
+  aiSummary String?    @db.Text
+}
+
+model Position {
+  id          String    @id @default(cuid())
+  portfolioId String
+  portfolio   Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  ticker      String
+  weight      Float
+  rationale   String?   @db.Text
+
+  @@index([portfolioId])
+}
