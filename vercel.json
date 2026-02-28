@@ -1,0 +1,19 @@
+{
+  "functions": {
+    "src/app/api/ai/**": {
+      "maxDuration": 60
+    },
+    "src/app/api/valuation/**": {
+      "maxDuration": 30
+    },
+    "src/app/api/financials/**": {
+      "maxDuration": 30
+    },
+    "src/app/api/companies/**": {
+      "maxDuration": 30
+    },
+    "src/app/api/portfolio/**": {
+      "maxDuration": 30
+    }
+  }
+}
