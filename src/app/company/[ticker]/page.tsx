@@ -25,12 +25,16 @@ export default async function CompanyPage({ params }: PageProps) {
   const { ticker } = await params;
   const upperTicker = ticker.toUpperCase();
 
-  const [profile, financials, prices, dynamicRatios] = await Promise.all([
+  // Fetch profile + financials + prices first (critical data)
+  // Dynamic ratios fetched after to avoid overwhelming Yahoo Finance API
+  const [profile, financials, prices] = await Promise.all([
     getCompanyData(upperTicker),
     getFinancials(upperTicker),
     getHistoricalPrices(upperTicker),
-    getDynamicRatios(upperTicker),
   ]);
+
+  // Fetch dynamic ratios separately to avoid concurrent Yahoo rate limits
+  const dynamicRatios = await getDynamicRatios(upperTicker).catch(() => []);
 
   if (!profile) notFound();
 
