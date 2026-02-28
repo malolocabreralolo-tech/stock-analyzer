@@ -34,6 +34,22 @@ export default async function CompanyPage({ params }: PageProps) {
 
   if (!profile) notFound();
 
+  // Enrich profile with latest closing price from historical data if missing
+  if ((!profile.price || profile.price === 0) && prices.length > 0) {
+    profile.price = prices[prices.length - 1].close;
+    // Estimate market cap from price if also missing
+    if (!profile.marketCap || profile.marketCap === 0) {
+      const company = await prisma.company.findUnique({ where: { ticker: upperTicker } });
+      if (company) {
+        // Update price in DB for future visits
+        await prisma.company.update({
+          where: { ticker: upperTicker },
+          data: { price: profile.price },
+        });
+      }
+    }
+  }
+
   const dynamicSectorMedians = await getSectorMultiplesFromDB(profile.sector, upperTicker);
 
   const valuation = calculateCompositeValuation(
