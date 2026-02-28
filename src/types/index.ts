@@ -46,6 +46,28 @@ export interface FinancialData {
   capitalExpenditure: number | null;
 }
 
+/** A single point in a dynamic time series combining price + financial data */
+export interface DynamicRatioPoint {
+  date: string;           // YYYY-MM-DD
+  price: number | null;
+  pe: number | null;
+  evEbitda: number | null;
+  pb: number | null;
+  ps: number | null;
+  netDebtToEbitda: number | null;
+  // TTM absolute values (for context)
+  revenueTTM: number | null;
+  netIncomeTTM: number | null;
+  ebitdaTTM: number | null;
+  fcfTTM: number | null;
+  // Latest snapshot values
+  roe: number | null;
+  grossMargin: number | null;
+  operatingMargin: number | null;
+  netMargin: number | null;
+  debtToEquity: number | null;
+}
+
 export interface HistoricalPrice {
   date: string;
   open: number;

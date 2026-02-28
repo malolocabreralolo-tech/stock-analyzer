@@ -1,9 +1,10 @@
 import prisma from '@/lib/db';
-import { CompanyProfile, FinancialData, HistoricalPrice } from '@/types';
+import { CompanyProfile, DynamicRatioPoint, FinancialData, HistoricalPrice } from '@/types';
 import * as fmp from './fmp';
 import * as yahoo from './yahoo';
 import * as yahooV2 from './yahoo-v2';
 import * as mock from './mock';
+import { getSP500FromWikipedia } from './sp500-wiki';
 
 const CACHE_TTL_HOURS = 24;
 
@@ -175,9 +176,7 @@ export async function getHistoricalPrices(ticker: string): Promise<HistoricalPri
     return mock.getMockHistoricalPrices(ticker);
   }
 
-  const fiveYearsAgo = new Date();
-  fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);
-  const from = fiveYearsAgo.toISOString().split('T')[0];
+  const from = '2000-01-01';
   const to = new Date().toISOString().split('T')[0];
 
   let prices = await fmp.getHistoricalPrice(ticker, from, to);
@@ -199,13 +198,34 @@ export async function searchCompanies(query: string) {
   return fmp.searchCompany(query);
 }
 
+export async function getDynamicRatios(ticker: string): Promise<DynamicRatioPoint[]> {
+  // Dynamic ratios are only available via yahoo-finance2
+  try {
+    return await yahooV2.getYahooV2DynamicRatios(ticker);
+  } catch {
+    return [];
+  }
+}
+
 export async function getAllMockCompanies() {
   return mock.getMockCompanies();
 }
 
 export async function getSP500() {
   if (useMockData()) {
-    return mock.getMockCompanies().map((c) => ({ symbol: c.ticker, name: c.name, sector: c.sector }));
+    // Use Wikipedia scraper for real S&P 500 data when FMP key is not configured
+    try {
+      const wikiCompanies = await getSP500FromWikipedia();
+      return wikiCompanies.map((c) => ({
+        symbol: c.symbol,
+        name: c.name,
+        sector: c.sector,
+        subIndustry: c.subIndustry,
+      }));
+    } catch (err) {
+      console.warn('Wikipedia S&P 500 scrape failed, falling back to mock data:', err);
+      return mock.getMockCompanies().map((c) => ({ symbol: c.ticker, name: c.name, sector: c.sector, subIndustry: '' }));
+    }
   }
   return fmp.getSP500List();
 }

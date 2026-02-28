@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { getCompanyData, getFinancials, getHistoricalPrices } from '@/lib/data-sources/aggregator';
+import { getCompanyData, getFinancials, getHistoricalPrices, getDynamicRatios } from '@/lib/data-sources/aggregator';
 import { calculateCompositeValuation } from '@/lib/valuation/composite';
 import prisma from '@/lib/db';
 import PriceChart from '@/components/charts/PriceChart';
@@ -22,10 +22,11 @@ export default async function CompanyPage({ params }: PageProps) {
   const { ticker } = await params;
   const upperTicker = ticker.toUpperCase();
 
-  const [profile, financials, prices] = await Promise.all([
+  const [profile, financials, prices, dynamicRatios] = await Promise.all([
     getCompanyData(upperTicker),
     getFinancials(upperTicker),
     getHistoricalPrices(upperTicker),
+    getDynamicRatios(upperTicker),
   ]);
 
   if (!profile) notFound();
@@ -90,7 +91,7 @@ export default async function CompanyPage({ params }: PageProps) {
       {/* Price Chart */}
       <Card>
         <CardHeader>
-          <CardTitle>Price History (5Y)</CardTitle>
+          <CardTitle>Price History</CardTitle>
         </CardHeader>
         <CardContent>
           <PriceChart data={prices} fairValue={valuation.compositeValue} />
@@ -111,7 +112,7 @@ export default async function CompanyPage({ params }: PageProps) {
               <CardTitle>Multi-Metric Interactive Chart</CardTitle>
             </CardHeader>
             <CardContent>
-              <InteractiveChart financials={financials} />
+              <InteractiveChart financials={financials} dynamicRatios={dynamicRatios} />
             </CardContent>
           </Card>
         </TabsContent>

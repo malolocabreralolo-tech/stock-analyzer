@@ -50,7 +50,7 @@ export async function getYahooQuote(ticker: string): Promise<{
   }
 }
 
-export async function getYahooHistoricalPrice(ticker: string, period = '5y'): Promise<HistoricalPrice[]> {
+export async function getYahooHistoricalPrice(ticker: string, period = 'max'): Promise<HistoricalPrice[]> {
   try {
     const data = await yahooFetch<{
       chart?: {

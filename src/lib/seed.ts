@@ -1,87 +1,52 @@
 import prisma from './db';
-import { getMockCompanies, getMockFinancials } from './data-sources/mock';
-import { calculateCompositeValuation } from './valuation/composite';
+import { getSP500FromWikipedia } from './data-sources/sp500-wiki';
+
+let seedInProgress = false;
 
 export async function seedMockData() {
   const existingCount = await prisma.company.count();
-  if (existingCount > 0) return; // Already seeded
+  if (existingCount >= 100) return; // Already seeded with S&P 500
 
-  console.log('Seeding mock data...');
-  const companies = getMockCompanies();
+  // Prevent concurrent seed calls
+  if (seedInProgress) return;
+  seedInProgress = true;
 
-  for (const profile of companies) {
-    // Create company
-    const company = await prisma.company.create({
-      data: {
-        ticker: profile.ticker,
-        name: profile.name,
-        sector: profile.sector,
-        industry: profile.industry,
-        marketCap: profile.marketCap,
-        exchange: profile.exchange,
-        price: profile.price,
-      },
-    });
+  console.log('Seeding S&P 500 company list from Wikipedia...');
 
-    // Add financials
-    const financials = getMockFinancials(profile.ticker);
-    for (const fin of financials) {
-      await prisma.financial.create({
-        data: {
-          companyId: company.id,
-          period: fin.period,
-          periodDate: fin.periodDate ? new Date(fin.periodDate) : null,
-          revenue: fin.revenue,
-          netIncome: fin.netIncome,
-          freeCashFlow: fin.freeCashFlow,
-          totalDebt: fin.totalDebt,
-          totalEquity: fin.totalEquity,
-          totalAssets: fin.totalAssets,
-          pe: fin.pe,
-          evEbitda: fin.evEbitda,
-          pb: fin.pb,
-          ps: fin.ps,
-          roe: fin.roe,
-          roic: fin.roic,
-          debtToEquity: fin.debtToEquity,
-          currentRatio: fin.currentRatio,
-          grossMargin: fin.grossMargin,
-          operatingMargin: fin.operatingMargin,
-          netMargin: fin.netMargin,
-          revenueGrowth: fin.revenueGrowth,
-          epsGrowth: fin.epsGrowth,
-          dividendYield: fin.dividendYield,
-          ebitda: fin.ebitda,
-          eps: fin.eps,
-          bookValuePerShare: fin.bookValuePerShare,
-          operatingCashFlow: fin.operatingCashFlow,
-          capitalExpenditure: fin.capitalExpenditure,
-          source: 'mock',
-        },
-      });
+  try {
+    const sp500 = await getSP500FromWikipedia();
+
+    // Batch upsert all companies with just profile info.
+    // Financial data and valuations are fetched on-demand when a user visits /company/[ticker].
+    let count = 0;
+    for (const company of sp500) {
+      try {
+        await prisma.company.upsert({
+          where: { ticker: company.symbol },
+          update: {
+            name: company.name,
+            sector: company.sector,
+            industry: company.subIndustry,
+          },
+          create: {
+            ticker: company.symbol,
+            name: company.name,
+            sector: company.sector,
+            industry: company.subIndustry,
+            exchange: 'NYSE/NASDAQ', // placeholder; updated on first visit
+          },
+        });
+        count++;
+      } catch (err) {
+        console.warn(`Failed to upsert ${company.symbol}:`, err);
+      }
     }
 
-    // Calculate and save valuation
-    const valuation = calculateCompositeValuation(
-      financials,
-      profile.price,
-      profile.sector,
-      profile.marketCap,
-    );
-
-    await prisma.valuation.create({
-      data: {
-        companyId: company.id,
-        currentPrice: valuation.currentPrice,
-        dcfValue: valuation.dcfValue,
-        multiplesValue: valuation.multiplesValue,
-        compositeValue: valuation.compositeValue,
-        upsidePercent: valuation.upsidePercent,
-        rating: valuation.rating,
-        confidence: valuation.confidence,
-      },
-    });
+    console.log(`Seeded ${count} S&P 500 companies from Wikipedia.`);
+  } catch (err) {
+    console.error('Failed to seed S&P 500 from Wikipedia:', err);
+    // Don't throw — the app can still work without seeding
+  } finally {
+    seedInProgress = false;
   }
-
-  console.log(`Seeded ${companies.length} companies with financials and valuations.`);
 }
