@@ -80,21 +80,23 @@ export default function PriceChart({ data, fairValue }: PriceChartProps) {
 
   return (
     <div className="space-y-3">
-      {/* Time range selector */}
-      <div className="flex rounded-lg border border-border overflow-hidden w-fit">
-        {TIME_RANGES.map((tr) => (
-          <button
-            key={tr.key}
-            onClick={() => setRange(tr.key)}
-            className={`px-3 py-1.5 text-xs font-medium transition-colors border-r border-border last:border-r-0 ${
-              range === tr.key
-                ? 'bg-primary text-primary-foreground'
-                : 'hover:bg-accent text-muted-foreground'
-            }`}
-          >
-            {tr.label}
-          </button>
-        ))}
+      {/* Time range selector — scrollable on mobile */}
+      <div className="overflow-x-auto">
+        <div className="flex rounded-lg border border-border overflow-hidden w-fit min-w-max">
+          {TIME_RANGES.map((tr) => (
+            <button
+              key={tr.key}
+              onClick={() => setRange(tr.key)}
+              className={`px-3 py-1.5 text-xs font-medium transition-colors border-r border-border last:border-r-0 ${
+                range === tr.key
+                  ? 'bg-primary text-primary-foreground'
+                  : 'hover:bg-accent text-muted-foreground'
+              }`}
+            >
+              {tr.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <ResponsiveContainer width="100%" height={350}>
@@ -110,11 +112,13 @@ export default function PriceChart({ data, fairValue }: PriceChartProps) {
             dataKey="date"
             tick={{ fontSize: 10 }}
             tickFormatter={(val) => {
-              const d = new Date(val);
-              if (range === '1M') return `${d.getDate()}/${d.getMonth() + 1}`;
-              return `${d.getMonth() + 1}/${d.getFullYear().toString().slice(2)}`;
+              const d = new Date(val + 'T00:00:00');
+              const mon = d.toLocaleString('en-US', { month: 'short' });
+              if (range === '1M' || range === '3M') return `${mon} ${d.getDate()}`;
+              if (range === '6M' || range === 'YTD' || range === '1Y') return `${mon} '${d.getFullYear().toString().slice(2)}`;
+              return `${mon} '${d.getFullYear().toString().slice(2)}`;
             }}
-            interval={Math.max(0, Math.floor(sampled.length / 7) - 1)}
+            interval={Math.max(0, Math.floor(sampled.length / 6) - 1)}
             axisLine={false}
             tickLine={false}
           />

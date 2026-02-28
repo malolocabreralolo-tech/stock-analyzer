@@ -230,23 +230,25 @@ export default function InteractiveChart({ financials, dynamicRatios = [] }: Int
   return (
     <div className="space-y-4">
 {/* Time range selector + Presets row */}
-      <div className="flex flex-wrap items-center gap-3">
-        {/* Time range buttons */}
+      <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 sm:gap-3">
+        {/* Time range buttons — scrollable on mobile */}
         {useDynamicChart && (
-          <div className="flex rounded-lg border border-border overflow-hidden">
-            {TIME_RANGES.map((tr) => (
-              <button
-                key={tr.key}
-                onClick={() => setTimeRange(tr.key)}
-                className={`px-3 py-1.5 text-xs font-medium transition-colors border-r border-border last:border-r-0 ${
-                  timeRange === tr.key
-                    ? 'bg-primary text-primary-foreground'
-                    : 'hover:bg-accent'
-                }`}
-              >
-                {tr.label}
-              </button>
-            ))}
+          <div className="overflow-x-auto">
+            <div className="flex rounded-lg border border-border overflow-hidden w-fit min-w-max">
+              {TIME_RANGES.map((tr) => (
+                <button
+                  key={tr.key}
+                  onClick={() => setTimeRange(tr.key)}
+                  className={`px-3 py-1.5 text-xs font-medium transition-colors border-r border-border last:border-r-0 ${
+                    timeRange === tr.key
+                      ? 'bg-primary text-primary-foreground'
+                      : 'hover:bg-accent'
+                  }`}
+                >
+                  {tr.label}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
